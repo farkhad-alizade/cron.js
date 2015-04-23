@@ -112,12 +112,22 @@ var CronJob = (function(){
         this.cronTime = new CronTime(cronTime);
         this.now = {};
         this.initiated = false;
+        this.isStopped = false;
         
         this.clock();
         
     }
     
     CronJob.prototype = {
+        
+        stop : function(){
+            this.events = [];
+            this.isStopped = true;  
+        },
+        
+        run : function(){
+            this.isStopped = false;
+        },
         
         addEvent: function(event) {
             this.events.push(event);
@@ -132,38 +142,42 @@ var CronJob = (function(){
         },
         
         clock: function() {
-            
-            var date = new Date,
-                now = this.now,
-                self = this,
-                cronTime = this.cronTime,
-                i;
-            
-            if (!this.initiated) {
-                // Make sure we start the clock precisely ON the 0th millisecond
-                setTimeout(function(){
-                    self.initiated = true;
-                    self.clock();
-                }, Math.ceil(+date / 1000) * 1000 - +date);
-                return;
-            }
-            
-            this.timer = this.timer || setInterval(function(){self.clock();}, 1000);
-            
-            now.second = date.getSeconds();
-            now.minute = date.getMinutes();
-            now.hour = date.getHours();
-            now.dayOfMonth = date.getDate();
-            now.month = date.getMonth();
-            now.dayOfWeek = date.getDay();
-            
-            for (i in now) {
-                if (!(now[i] in cronTime[i])) {
+            if (!this.isStopped) {
+                var date = new Date,
+                    now = this.now,
+                    self = this,
+                    cronTime = this.cronTime,
+                    i;
+                
+                if (!this.initiated) {
+                    // Make sure we start the clock precisely ON the 0th millisecond
+                    setTimeout(function(){
+                        self.initiated = true;
+                        self.clock();
+                    }, Math.ceil(+date / 1000) * 1000 - +date);
                     return;
                 }
+                
+                this.timer = this.timer || setInterval(function(){self.clock();}, 1000);
+                
+                now.second = date.getSeconds();
+                now.minute = date.getMinutes();
+                now.hour = date.getHours();
+                now.dayOfMonth = date.getDate();
+                now.month = date.getMonth();
+                now.dayOfWeek = date.getDay();
+                
+                for (i in now) {
+                    if (!(now[i] in cronTime[i])) {
+                        return;
+                    }
+                }
+                
+                this.runEvents();
+            }else{
+                clearTimeout(this.timer);
+                clearInterval(this.timer);
             }
-            
-            this.runEvents();
             
         }
         
